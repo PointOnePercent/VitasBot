@@ -1,0 +1,45 @@
+{
+  "name": "vitas2222",
+  "version": "2.0.4",
+  "description": "A custom Vitas Bot for the 0.1% community!",
+  "main": "index.js",
+  "scripts": {
+    "test": "test",
+    "build": "rimraf dist/ && babel ./ --out-dir dist/ --extensions \".js,.ts\" --ignore ./node_modules,./.babelrc,./package.json,./npm-debug.log --copy-files",
+    "start": "node dist/vitas.js",
+    "start-dev": "node vitas",
+    "vitas": "npm run build && npm run start",
+    "check-types": "tsc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PointOnePercent/VitasBot.git"
+  },
+  "author": "Arcyvilk",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/PointOnePercent/VitasBot/issues"
+  },
+  "homepage": "https://github.com/PointOnePercent/VitasBot#readme",
+  "dependencies": {
+    "@types/node": "^11.13.4",
+    "axios": ">=0.18.1",
+    "compromise": "^12.2.1",
+    "discord.js": "^11.4.2",
+    "markov-strings": "^2.1.0",
+    "mongodb": "^3.2.3",
+    "rimraf": "^2.6.3"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.4.3",
+    "@babel/core": "^7.4.3",
+    "@babel/plugin-proposal-class-properties": "^7.4.0",
+    "@babel/plugin-proposal-object-rest-spread": "^7.4.3",
+    "@babel/plugin-transform-async-to-generator": "^7.4.0",
+    "@babel/polyfill": "^7.4.3",
+    "@babel/preset-env": "^7.4.3",
+    "@babel/preset-es2015": "^7.0.0-beta.53",
+    "@babel/preset-typescript": "^7.3.3",
+    "lodash": "^4.17.11"
+  }
+}
