@@ -1,4 +1,4 @@
-# DrFetus
+# VitasBot
 A custom bot created for the 0.1% Discord community.
 
 
@@ -25,13 +25,13 @@ To work, bot requires a running mongoDB database.
 - command for the mongo daemon: `mongod --auth --fork --port MONGO_PORT --bind_ip 0.0.0.0 --dbpath /var/lib/mongodb --logpath /var/lib/mongod.log`
 
 How to start the bot on Ubuntu remote server:
-- clone the repository - `git clone http://github.com/PointOnePercent/DrFetus`
+- clone the repository - `https://github.com/Arcyvilk/VitasBot.git`
 - install dependencies - `npm install`
 - don't forget to start mongoDB instance and set up the `config.json` file
-- start the bot with `npm run fetus` command (or `forever start -c "npm run fetus" ./` if you want to rum daemon)
+- start the bot with `npm run vitas` command (or `forever start -c "npm run vitas" ./` if you want to rum daemon)
 
 How to stop the daemon
 - forever stop <process number>
-- `ps -ef | grep fetus`
+- `ps -ef | grep vitas`
 - `kill <PID>`
 
