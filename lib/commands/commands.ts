@@ -183,6 +183,5 @@ export const vitas = async (msg:Discord.Message, reaction?) => {
 
 export const refresh = (msg:Discord.Message) => {
     config.DATABASES.map(db => updateCache(db.symbol));
-    msg.react('✔️');
-    
+    msg.react('✔️');    
 }
