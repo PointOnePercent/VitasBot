@@ -3,10 +3,11 @@ import Markov from 'markov-strings';
 import nlp from 'compromise';
 import { uniq, flatten } from 'lodash';
 import { chooseRandom, happensWithAChanceOf } from '../rng';
-import { createEmbed } from '../helpers';
 import { insertData } from '../db';
 import { log } from '../../log';
 import { cache } from '../../cache';
+import { updateCache } from '../db';
+import config from '../../config.json';
 
 // INITIALIZATION
 let markovInit;
@@ -172,4 +173,10 @@ export const vitas = async (msg:Discord.Message, reaction?) => {
             msg.channel.stopTyping();
         })
         .catch(err => console.trace(err));
+}
+
+export const refresh = (msg:Discord.Message) => {
+    config.DATABASES.map(db => updateCache(db.symbol));
+    msg.react('✔️');
+    
 }
