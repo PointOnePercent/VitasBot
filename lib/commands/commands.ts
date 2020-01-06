@@ -12,7 +12,9 @@ import config from '../../config.json';
 // INITIALIZATION
 let markovInit;
 const initMarkov = async dataArrays => {
-    const stateSize = 1;
+    const stateSize = cache["options"] 
+        ? cache["options"].find(option => option.option === 'stateSize').value 
+        : 2;
     const data = [].concat(...dataArrays);
     markovInit = new Markov(data, { stateSize })
     markovInit.buildCorpus();
@@ -105,8 +107,12 @@ export const fetchvitas = (msg:Discord.Message) => {
     fetchMoar(0, null);
 }
 export const vitas = async (msg:Discord.Message, reaction?) => {
-    const sentencesCommand = 5;
-    const sentencesReaction = 3;
+    const sentencesCommand = cache["options"] 
+        ? cache["options"].find(option => option.option === 'sentencesCommand').value 
+        : 5;
+    const sentencesReaction = cache["options"] 
+        ? cache["options"].find(option => option.option === 'sentencesReaction').value 
+        : 3;
     const options = {
         maxTries: 50,
         maxLength: 300,
@@ -115,9 +121,9 @@ export const vitas = async (msg:Discord.Message, reaction?) => {
         filter: result => result.string.endsWith('.')
     }
     const normalizedMsgs:string[] = cache["vitas"].map(vitas => vitas.vitas);
-    const chanceToSwapNouns = 30;
-    const chanceToSwapProperNouns = 55;
-    const chanceToSwapNicknames = 30;
+    const chanceToSwapNouns = cache["options"] ? cache["options"].find(option => option.option === 'chanceToSwapNouns').value : 30;
+    const chanceToSwapProperNouns = cache["options"] ? cache["options"].find(option => option.option === 'chanceToSwapProperNouns').value : 55;
+    const chanceToSwapNicknames = cache["options"] ? cache["options"].find(option => option.option === 'chanceToSwapNicknames').value : 30;
     let content = '';
     const usersTalking:string[] = [];
 
