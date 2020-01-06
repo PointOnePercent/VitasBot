@@ -32,12 +32,24 @@ let normalize = (content, filterBy?) => {
     if (filterBy) {
         let filtered = nounObject.map(noun => Object.entries(noun).map(([key, value]) => ({ key, value })));
         let filteredFlatten = flatten(filtered)
-            .filter(noun => noun.value.includes(filterBy) 
-                && !noun.value.includes('Demonym')
-                && !noun.value.includes('Acronym')
-                && !noun.value.includes('Honorific')
-                && !noun.value.includes('IgnoreThis')
-            )
+            .filter(noun => {
+                const legit = noun.value 
+                    && noun.value.includes(filterBy) 
+                    && !noun.value.includes('Demonym')
+                    && !noun.value.includes('Acronym')
+                    && !noun.value.includes('Pronoun')
+                    && !noun.value.includes('Honorific')
+                    && !noun.value.includes('IgnoreThis');
+                if (legit) {
+                    const tryAgain = nlp(noun.key.toLowerCase()).nouns().out('array')
+                    if (tryAgain.length === 0)
+                        return false;
+                    else
+                        return true;
+                }
+                else
+                    return false;
+        })
         nounObject = filteredFlatten;
         let nounArray = nounObject.map(noun => noun.key);
         return nounArray;
@@ -106,58 +118,57 @@ export const vitas = async (msg:Discord.Message, reaction?) => {
     const chanceToSwapProperNouns = 55;
     const chanceToSwapNicknames = 30;
     let content = '';
+    const usersTalking:string[] = [];
 
-    msg.channel.startTyping();
     initMarkov(normalizedMsgs);
+    msg.channel.startTyping();
 
-    if (reaction) { // Vitas was invoked by command //TOCHANGE - THERE SHOULD BE !reaction
-        for (let i = 0; i < sentencesCommand; i++) 
-            content += await markovInit.generate(options).string + ' ';
-        const embed = createEmbed(`Vitas says`, [{ title: '\_\_\_', content }])
-        msg.channel.send(embed)
-        msg.channel.stopTyping();
-    }
-    else { // Vitas was invoked by reaction
-        const usersTalking:string[] = [];
-        await msg.channel.fetchMessages({ limit: 10, before: msg.id })
-            .then(async messages => {
-                for (let i = 0; i < sentencesReaction; i++) 
-                    content += await markovInit.generate(options).string + ' ';
-                console.log(`original: ${content}`)
-                messages = messages.filter(message => !message.author.bot);
-                messages.map(message => usersTalking.push(message.author.username));
+    await msg.channel.fetchMessages({ limit: 10, before: msg.id })
+        .then(async messages => {
+            const limit = reaction ? sentencesReaction : sentencesCommand;
+            for (let i = 0; i < limit; i++) 
+                content += await markovInit.generate(options).string + ' ';
+            
+            messages = messages.filter(message => !message.author.bot);
+            messages.map(message => usersTalking.push(message.author.username));
 
-                let aggregatedMessages = messages.reduce((acc, value) => `${acc}. ${value}`);
-                let recentNouns = normalize(aggregatedMessages);
-                let vitasNouns = normalize(content);
-                let recentProperNouns = normalize(aggregatedMessages, 'ProperNoun');
-                let vitasProperNouns = normalize(content, 'ProperNoun');
+            if (messages.size === 0)
+                return;
 
-                console.log("vitasNouns");
-                console.log(vitasNouns);
-                vitasNouns.map(nounToSwap => {
-                    if (happensWithAChanceOf(chanceToSwapNouns)) {
-                        const replaceWith = chooseRandom(recentNouns);
-                        content = content.replace(nounToSwap, replaceWith);
-                    }
-                })
-                console.log("vitasProperNouns")
-                console.log(vitasProperNouns)
-                vitasProperNouns.map(properNounToSwap => {
-                    if (happensWithAChanceOf(chanceToSwapProperNouns)) {
-                        const replaceWith = chooseRandom(recentProperNouns);
-                        const regex = new RegExp(properNounToSwap, "gi");
-                        content = content.replace(regex, replaceWith);
-                    }
-                    else if (happensWithAChanceOf(chanceToSwapNicknames)) {
-                        const replaceWith = chooseRandom(usersTalking);
-                        const regex = new RegExp(properNounToSwap, "gi");
-                        content = content.replace(regex, replaceWith);
-                    }                    
-                })
+            let aggregatedMessages = messages.reduce((acc, value) => `${acc}. ${value}`);
+            let recentNouns = normalize(aggregatedMessages);
+            let vitasNouns = normalize(content);
+            let recentProperNouns = normalize(aggregatedMessages, 'ProperNoun');
+            let vitasProperNouns = normalize(content, 'ProperNoun');
+
+            console.log(`${new Date().toLocaleString()} - ------------ [ ${reaction ? 'REACTION' : 'COMMAND'} ] ------------`);
+            console.log(`${new Date().toLocaleString()} - [ORIGINAL] - ${content}`);
+            console.log(`${new Date().toLocaleString()} - [NOUNS] - ${JSON.stringify(recentNouns)}`);
+            console.log(`${new Date().toLocaleString()} - [VITAS NOUNS] - ${JSON.stringify(vitasNouns)}`);
+            console.log(`${new Date().toLocaleString()} - [PROPER NOUNS] - ${JSON.stringify(recentProperNouns)}`);
+            console.log(`${new Date().toLocaleString()} - [VITAS PROPER NOUNS] - ${JSON.stringify(vitasProperNouns)}`);
+
+            vitasNouns.map(nounToSwap => {
+                if (happensWithAChanceOf(chanceToSwapNouns) && recentNouns.length !== 0) {
+                    const replaceWith = chooseRandom(recentNouns);
+                    content = content.replace(nounToSwap, replaceWith);
+                }
             })
-            .catch(err => log.WARN(err));
-        msg.channel.send(content)
-        msg.channel.stopTyping();        
-    }
+            vitasProperNouns.map(properNounToSwap => {
+                if (happensWithAChanceOf(chanceToSwapProperNouns) && recentProperNouns.length !== 0) {
+                    const replaceWith = chooseRandom(recentProperNouns);
+                    const regex = new RegExp(properNounToSwap, "gi");
+                    content = content.replace(regex, replaceWith);
+                }
+                else if (happensWithAChanceOf(chanceToSwapNicknames)) {
+                    const replaceWith = chooseRandom(usersTalking);
+                    const regex = new RegExp(properNounToSwap, "gi");
+                    content = content.replace(regex, replaceWith);
+                }                    
+            })
+            console.log(`${new Date().toLocaleString()} - [RESULT] - ${JSON.stringify(content)}`);
+            msg.channel.send(content);
+            msg.channel.stopTyping();
+        })
+        .catch(err => console.trace(err));
 }

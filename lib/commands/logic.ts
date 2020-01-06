@@ -6,7 +6,6 @@ import {
     IExecuteEmbed, 
     IEmbedField,
 } from '../types/command';
-import { botRefuses } from '../rng';
 import { isUserAdmin } from '../message';
 import { createEmbed } from '../helpers';
 
@@ -16,14 +15,12 @@ class Command {
     private isDisabled: boolean;
     private isModOnly: boolean;
     private isProtected: boolean;
-    private refusal: string;
 
     constructor(command:ICommand, msg:Discord.Message) {
         this.channel = msg.channel;
         this.isDisabled = command.isDisabled || false;
         this.isModOnly = command.isModOnly || false;
         this.isProtected = command.isProtected || true;
-        this.refusal = command.refusal || 'No.';
         this.canBeExecuted = this._canBeExecuted(msg);
     }
 
@@ -34,10 +31,6 @@ class Command {
         }
         if (this.isModOnly && !isUserAdmin(msg)) {
             msg.react('🚫');
-            return false;
-        }
-        if (botRefuses()) {
-            this.channel.send(this.refusal);
             return false;
         }
         return true;

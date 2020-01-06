@@ -38,7 +38,6 @@ const answerCommand = (msg:Discord.Message) => {
         deleteCommand(msg);
         return;
     }
-    msg.react('❔');
 };
 const checkForReactionTriggers = (msg:Discord.Message) => {
     let appropiateReactions = new Array();

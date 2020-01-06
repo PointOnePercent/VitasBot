@@ -13,7 +13,7 @@ const ready = bot => {
     config.DATABASES.map(db => connectToDb(db));
 
     cache.bot = bot;
-    log.INFO('Vitas working.');
+    log.INFO(`${new Date().toLocaleString()} - Vitas working!`);
 }
 
 bot.on('ready', () => ready(bot));
