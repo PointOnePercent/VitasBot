@@ -41,7 +41,6 @@ let nlpPlugin = (Doc, world) => {
 let normalize = (content, include?, exclude?) => {
     nlp.extend(nlpPlugin);
     let prepare:nlp.Document = nlp(content);
-    prepare.debug()
     let normalized:any = prepare.normalize();
     let final:string = normalized.out('text');
     let nounObject:any = nlp(final)
