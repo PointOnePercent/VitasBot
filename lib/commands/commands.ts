@@ -19,49 +19,57 @@ const initMarkov = async dataArrays => {
     markovInit = new Markov(data, { stateSize })
     markovInit.buildCorpus();
 }
-let nlpPlugin = (Doc, world, ) => {
-    const customWords = cache["customWords"].map(word => ({ [word.word]: word.tag }));
-    world.addWords(...customWords);
+let nlpPlugin = (Doc, world) => {
+    const customWords = {};
+    const customTags = {};
+
+    cache["customTags"].map(tag => {
+        tag.notA
+            ? customTags[tag.tag] = { 
+                isA: tag.isA,
+                notA: tag.notA
+            }
+            : customTags[tag.tag] = { 
+                isA: tag.isA
+            }
+    });
+    cache["customWords"].map(word => customWords[word.word] = word.tag);
+
+    world.addWords(customWords);
+    world.addTags(customTags);
 }
-let normalize = (content, filterBy?) => {    
+let normalize = (content, include?, exclude?) => {
     nlp.extend(nlpPlugin);
     let prepare:nlp.Document = nlp(content);
+    prepare.debug()
     let normalized:any = prepare.normalize();
     let final:string = normalized.out('text');
     let nounObject:any = nlp(final)
         .nouns()
         .unique()
         .out('tags')
-    if (filterBy) {
-        let filtered = nounObject.map(noun => Object.entries(noun).map(([key, value]) => ({ key, value })));
-        let filteredFlatten = flatten(filtered)
-            .filter(noun => {
-                const legit = noun.value 
-                    && noun.value.includes(filterBy) 
-                    && !noun.value.includes('Demonym')
-                    && !noun.value.includes('Acronym')
-                    && !noun.value.includes('Pronoun')
-                    && !noun.value.includes('Honorific')
-                    && !noun.value.includes('IgnoreThis');
-                if (legit) {
-                    const tryAgain = nlp(noun.key.toLowerCase()).nouns().out('array')
-                    if (tryAgain.length === 0)
-                        return false;
-                    else
-                        return true;
-                }
-                else
+    let filtered = nounObject.map(noun => Object.entries(noun).map(([key, value]) => ({ key, value })));
+    let filteredFlatten = flatten(filtered)
+        .filter(noun => {
+            let legit = noun.value 
+                && !noun.value.includes('IgnoreThis');
+            if (exclude && exclude.length > 0) 
+                legit = legit && exclude.filter(tagToExclude => noun.value.includes(tagToExclude)).length === 0;
+            if (include && include.length > 0) 
+                legit = legit && include.filter(tagToInclude => !noun.value.includes(tagToInclude)).length === 0;
+            if (legit) {
+                const tryAgain = nlp(noun.key.toLowerCase()).nouns().out('array')
+                if (tryAgain.length === 0)
                     return false;
-        })
-        nounObject = filteredFlatten;
-        let nounArray = nounObject.map(noun => noun.key);
-        return nounArray;
-    }
-    else {
-        let nounArray = nounObject.map(noun => Object.entries(noun).map(([key, value]) => key ));
-        let flattenedNounArray = flatten(nounArray);
-        return flattenedNounArray;
-    }
+                else
+                    return true;
+            }
+            else
+                return false;
+    })
+    nounObject = filteredFlatten;
+    let nounArray = nounObject.map(noun => noun.key);
+    return nounArray;
 }
 
 export const fetchvitas = (msg:Discord.Message) => {
@@ -143,10 +151,10 @@ export const vitas = async (msg:Discord.Message, reaction?) => {
                 return;
 
             let aggregatedMessages = messages.reduce((acc, value) => `${acc}. ${value}`);
-            let recentNouns = normalize(aggregatedMessages);
-            let vitasNouns = normalize(content);
-            let recentProperNouns = normalize(aggregatedMessages, 'ProperNoun');
-            let vitasProperNouns = normalize(content, 'ProperNoun');
+            let recentNouns = normalize(aggregatedMessages, [], ['ProperNoun', 'Demonym', 'Acronym', 'Pronoun', 'Honorific']);
+            let vitasNouns = normalize(content, [], ['ProperNoun', 'Demonym', 'Acronym', 'Pronoun', 'Honorific']);
+            let recentProperNouns = normalize(aggregatedMessages, ['ProperNoun'], ['Demonym', 'Acronym', 'Pronoun', 'Honorific']);
+            let vitasProperNouns = normalize(content, ['ProperNoun'], ['Demonym', 'Acronym', 'Pronoun', 'Honorific']);
 
             console.log(`${new Date().toLocaleString()} - ------------ [ ${reaction ? 'REACTION' : 'COMMAND'} ] ------------`);
             console.log(`${new Date().toLocaleString()} - [ORIGINAL] - ${content}`);
