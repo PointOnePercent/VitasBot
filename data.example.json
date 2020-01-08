@@ -1,0 +1,31 @@
+[  {
+    "total_results": 1234,
+    "messages": [
+      [
+        {
+          "id": "000000000000000000000000",
+          "type": 0,
+          "content": "Wow, that's indeed a message I've once sent on Discord.",
+          "channel_id": "1234567890",
+          "author": {
+            "id": "6666666666666666666",
+            "username": "Hellfire",
+            "avatar": "abc56789fff129387883",
+            "discriminator": "6666"
+          },
+          "attachments": [],
+          "embeds": [],
+          "mentions": [],
+          "mention_roles": [],
+          "pinned": false,
+          "mention_everyone": false,
+          "tts": false,
+          "timestamp": "2019-07-15T18:51:48.961000+00:00",
+          "edited_timestamp": null,
+          "flags": 0
+        }
+      ]
+    ],
+    "analytics_id": "53627819029384756456789"
+  }
+]

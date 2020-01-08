@@ -1,13 +1,16 @@
 import Discord from "discord.js";
 import Markov from 'markov-strings';
 import nlp from 'compromise';
-import { uniq, flatten } from 'lodash';
+import { uniq, flatten, flattenDeep } from 'lodash';
 import { chooseRandom, happensWithAChanceOf } from '../rng';
 import { insertData } from '../db';
 import { log } from '../../log';
 import { cache } from '../../cache';
 import { updateCache } from '../db';
 import config from '../../config.json';
+import { totalmem } from "os";
+
+const logs = require('../../data.json');
 
 // INITIALIZATION
 let markovInit;
@@ -102,7 +105,7 @@ export const fetchvitas = (msg:Discord.Message) => {
     
     const finish = () => {
         const normalizedMsgs = uniq(msgs)
-        normalizedMsgs.map(msg => insertData('fetus', 'vitas', 'vitas', msg, err =>
+        normalizedMsgs.map(msg => insertData('vitas', 'vitas', 'vitas', msg, err =>
             err
                 ? console.log(err)
                 : null
@@ -112,6 +115,24 @@ export const fetchvitas = (msg:Discord.Message) => {
     }
     msg.channel.startTyping();
     fetchMoar(0, null);
+}
+export const fetchvitaslocal = (msg:Discord.Message) => {
+    msg.channel.startTyping();
+
+    const vitasId = '361185720477679616';
+    const flattened = logs.map(log => flatten(log.messages));
+    const flattenedMore = flatten(flattened);
+    const filtered = flattenedMore
+        .filter(msg => msg.author.id === vitasId && msg.content != '' && !msg.content.startsWith('http'))
+        .map(msg => msg.content.endsWith('.') || msg.content.endsWith('?') || msg.content.endsWith('!') ? msg.content : `${msg.content}.`);
+    const normalizedMsgs = uniq(filtered);
+    normalizedMsgs.map(msg => insertData('vitas', 'vitas', 'vitas', msg, err =>
+        err
+            ? console.log(err)
+            : null
+    ))
+    msg.channel.send('Done!');
+    msg.channel.stopTyping();
 }
 export const vitas = async (msg:Discord.Message, reaction?) => {
     const sentencesCommand = cache["options"] 
