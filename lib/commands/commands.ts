@@ -135,6 +135,7 @@ export const fetchvitaslocal = (msg:Discord.Message) => {
     msg.channel.stopTyping();
 }
 export const vitas = async (msg:Discord.Message, reaction?) => {
+    msg.channel.startTyping();
     const sentencesCommand = cache["options"] 
         ? cache["options"].find(option => option.option === 'sentencesCommand').value 
         : 5;
@@ -155,8 +156,7 @@ export const vitas = async (msg:Discord.Message, reaction?) => {
     let content = '';
     const usersTalking:string[] = [];
 
-    initMarkov(normalizedMsgs);
-    msg.channel.startTyping();
+    initMarkov(normalizedMsgs); //this should be done only once!
 
     await msg.channel.fetchMessages({ limit: 10, before: msg.id })
         .then(async messages => {
