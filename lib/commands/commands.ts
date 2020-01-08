@@ -213,7 +213,7 @@ export const vitas = async (msg:Discord.Message, reaction?) => {
                     content = content.replace(regex, replaceWith);
                 }                    
             })
-            content = content.replace(/<@.*?>/g, '');
+            content = content.replace(/<@.*?>/g, chooseRandom(usersTalking));
             console.log(`${new Date().toLocaleString()} - [RESULT] - ${JSON.stringify(content)}`);
             msg.channel.send(content);
             msg.channel.stopTyping();
