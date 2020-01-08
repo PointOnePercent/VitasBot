@@ -117,14 +117,26 @@ export const fetchvitaslocal = (msg:Discord.Message) => {
     msg.channel.startTyping();
 
     let logs;
-    try { logs = require('../../data.json') }
-    catch { return msg.channel.send('Data file not found.') }
-    const vitasId = '361185720477679616';
-    const flattened = logs.map(log => flatten(log.messages));
-    const flattenedMore = flatten(flattened);
-    const filtered = flattenedMore
-        .filter(msg => msg.author.id === vitasId && msg.content != '' && !msg.content.startsWith('http'))
-        .map(msg => msg.content.endsWith('.') || msg.content.endsWith('?') || msg.content.endsWith('!') ? msg.content : `${msg.content}.`);
+    let filtered;
+    try { 
+        logs = require('../../data.json') 
+    }
+    catch { 
+        return msg.channel.send('Data file not found.') 
+    }
+
+    if (Array.isArray(logs)) { // just an array of quotes
+        filtered = logs
+            .map(msg => msg.endsWith('.') || msg.endsWith('?') || msg.endsWith('!') ? msg : `${msg}.`);
+    }
+    else { // object fetched from Discord's search function
+        const vitasId = '361185720477679616';
+        const flattened = logs.map(log => flatten(log.messages));
+        const flattenedMore = flatten(flattened);
+        filtered = flattenedMore
+            .filter(msg => msg.author.id === vitasId && msg.content != '' && !msg.content.startsWith('http'))
+            .map(msg => msg.content.endsWith('.') || msg.content.endsWith('?') || msg.content.endsWith('!') ? msg.content : `${msg.content}.`);
+    }
     const normalizedMsgs = uniq(filtered);
     normalizedMsgs.map(msg => insertData('vitas', 'vitas', 'vitas', msg, err =>
         err
@@ -171,10 +183,10 @@ export const vitas = async (msg:Discord.Message, reaction?) => {
                 return;
 
             let aggregatedMessages = messages.reduce((acc, value) => `${acc}. ${value}`);
-            let recentNouns = normalize(aggregatedMessages, [], ['ProperNoun', 'Demonym', 'Acronym', 'Pronoun', 'Honorific']);
-            let vitasNouns = normalize(content, [], ['ProperNoun', 'Demonym', 'Acronym', 'Pronoun', 'Honorific']);
-            let recentProperNouns = normalize(aggregatedMessages, ['ProperNoun'], ['Demonym', 'Acronym', 'Pronoun', 'Honorific']);
-            let vitasProperNouns = normalize(content, ['ProperNoun'], ['Demonym', 'Acronym', 'Pronoun', 'Honorific']);
+            let recentNouns = uniq(normalize(aggregatedMessages, [], ['ProperNoun', 'Demonym', 'Acronym', 'Pronoun', 'Honorific']));
+            let vitasNouns = uniq(normalize(content, [], ['ProperNoun', 'Demonym', 'Acronym', 'Pronoun', 'Honorific']));
+            let recentProperNouns = uniq(normalize(aggregatedMessages, ['ProperNoun'], ['Demonym', 'Acronym', 'Pronoun', 'Honorific']));
+            let vitasProperNouns = uniq(normalize(content, ['ProperNoun'], ['Demonym', 'Acronym', 'Pronoun', 'Honorific']));
 
             console.log(`${new Date().toLocaleString()} - ------------ [ ${reaction ? 'REACTION' : 'COMMAND'} ] ------------`);
             console.log(`${new Date().toLocaleString()} - [ORIGINAL] - ${content}`);
