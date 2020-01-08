@@ -8,9 +8,6 @@ import { log } from '../../log';
 import { cache } from '../../cache';
 import { updateCache } from '../db';
 import config from '../../config.json';
-import { totalmem } from "os";
-
-const logs = require('../../data.json');
 
 // INITIALIZATION
 let markovInit;
@@ -119,6 +116,9 @@ export const fetchvitas = (msg:Discord.Message) => {
 export const fetchvitaslocal = (msg:Discord.Message) => {
     msg.channel.startTyping();
 
+    let logs;
+    try { logs = require('../../data.json') }
+    catch { return msg.channel.send('Data file not found.') }
     const vitasId = '361185720477679616';
     const flattened = logs.map(log => flatten(log.messages));
     const flattenedMore = flatten(flattened);
