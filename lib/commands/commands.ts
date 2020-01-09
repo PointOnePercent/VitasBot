@@ -81,8 +81,10 @@ export const fetch = (msg:Discord.Message) => {
     const userName = cache["options"] 
         ? cache["options"].find(option => option.option === 'personToFetch').value.nickname
         : 'vitas';
+    const fetchLimit = cache["options"] 
+        ? cache["options"].find(option => option.option === 'fetchLimit').value
+        : 1;
     const msgs:string[] = [];
-    const fetchNumber = 130;
 
     // @ts-ignore:next-line
     const channel = cache.bot.channels.find(channel => channel.id === channelId)
@@ -97,7 +99,7 @@ export const fetch = (msg:Discord.Message) => {
                     if (msg.content != '' && msg.author.id === userId && !msg.content.startsWith('http'))
                         msgs.push(msg.content.endsWith('.') || msg.content.endsWith('?') || msg.content.endsWith('!') ? msg.content : `${msg.content}.`)
                     })
-                if (index <= fetchNumber) {
+                if (index <= fetchLimit) {
                     setTimeout(() => fetchMoar(index + 1, messages.lastKey()), 1000);
                 }
                 else
