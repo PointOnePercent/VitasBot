@@ -1,7 +1,7 @@
 import Discord from "discord.js";
 import Markov from 'markov-strings';
 import nlp from 'compromise';
-import { uniq, flatten, flattenDeep } from 'lodash';
+import { uniq, flatten } from 'lodash';
 import { chooseRandom, happensWithAChanceOf } from '../rng';
 import { insertData } from '../db';
 import { log } from '../../log';
@@ -71,9 +71,16 @@ let normalize = (content, include?, exclude?) => {
     return nounArray;
 }
 
-export const fetchvitas = (msg:Discord.Message) => {
-    const channelId = '572793751202955264'
-    const vitasId = '361185720477679616';
+export const fetch = (msg:Discord.Message) => {
+    const channelId = cache["options"] 
+        ? cache["options"].find(option => option.option === 'channelToFetch').value 
+        : '572793751202955264'
+    const userId = cache["options"] 
+        ? cache["options"].find(option => option.option === 'personToFetch').value.id
+        : '361185720477679616';
+    const userName = cache["options"] 
+        ? cache["options"].find(option => option.option === 'personToFetch').value.nickname
+        : 'vitas';
     const msgs:string[] = [];
     const fetchNumber = 130;
 
@@ -84,11 +91,10 @@ export const fetchvitas = (msg:Discord.Message) => {
         return msg.channel.send('Invalid channel.');
     
     const fetchMoar = (index, lastMsgId) => {
-        console.log(lastMsgId);
         channel.fetchMessages({ limit: 100, before: lastMsgId })
             .then(messages => {
                 messages.map(msg => {
-                    if (msg.content != '' && msg.author.id === vitasId && !msg.content.startsWith('http'))
+                    if (msg.content != '' && msg.author.id === userId && !msg.content.startsWith('http'))
                         msgs.push(msg.content.endsWith('.') || msg.content.endsWith('?') || msg.content.endsWith('!') ? msg.content : `${msg.content}.`)
                     })
                 if (index <= fetchNumber) {
@@ -101,8 +107,8 @@ export const fetchvitas = (msg:Discord.Message) => {
     }
     
     const finish = () => {
-        const normalizedMsgs = uniq(msgs)
-        normalizedMsgs.map(msg => insertData('vitas', 'vitas', 'vitas', msg, err =>
+        const normalizedMsgs = uniq(msgs);
+        normalizedMsgs.map(msg => insertData('vitas', userName, userName, msg, err =>
             err
                 ? console.log(err)
                 : null
@@ -113,28 +119,29 @@ export const fetchvitas = (msg:Discord.Message) => {
     msg.channel.startTyping();
     fetchMoar(0, null);
 }
-export const fetchvitaslocal = (msg:Discord.Message) => {
+export const fetchlocal = (msg:Discord.Message) => {
     msg.channel.startTyping();
 
     let logs;
     let filtered;
     try { 
-        logs = require('../../data.json') 
+        logs = require('../../data.json');
     }
-    catch { 
+    catch(err) { 
+        console.log(err);
         return msg.channel.send('Data file not found.') 
     }
 
-    if (Array.isArray(logs)) { // just an array of quotes
+    if (logs.length > 0 && typeof logs[0] === 'string') { // just an array of quotes
         filtered = logs
             .map(msg => msg.endsWith('.') || msg.endsWith('?') || msg.endsWith('!') ? msg : `${msg}.`);
     }
     else { // object fetched from Discord's search function
-        const vitasId = '361185720477679616';
+        const userId = '361185720477679616';
         const flattened = logs.map(log => flatten(log.messages));
         const flattenedMore = flatten(flattened);
         filtered = flattenedMore
-            .filter(msg => msg.author.id === vitasId && msg.content != '' && !msg.content.startsWith('http'))
+            .filter(msg => msg.author.id === userId && msg.content != '' && !msg.content.startsWith('http'))
             .map(msg => msg.content.endsWith('.') || msg.content.endsWith('?') || msg.content.endsWith('!') ? msg.content : `${msg.content}.`);
     }
     const normalizedMsgs = uniq(filtered);
