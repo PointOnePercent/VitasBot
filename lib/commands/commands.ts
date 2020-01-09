@@ -1,9 +1,9 @@
 import Discord from "discord.js";
 import Markov from 'markov-strings';
 import nlp from 'compromise';
-import { uniq, flatten } from 'lodash';
+import { uniq, uniqBy, flatten } from 'lodash';
 import { chooseRandom, happensWithAChanceOf } from '../rng';
-import { insertData, insertMany } from '../db';
+import { insertData, insertMany, upsertOne } from '../db';
 import { log } from '../../log';
 import { cache } from '../../cache';
 import { updateCache } from '../db';
@@ -71,6 +71,10 @@ let normalize = (content, include?, exclude?) => {
     return nounArray;
 }
 
+export const refresh = (msg:Discord.Message) => {
+    config.DATABASES.map(db => updateCache(db.symbol));
+    msg.react('✔️');    
+}
 export const fetch = (msg:Discord.Message) => {
     const channelId = cache["options"] 
         ? cache["options"].find(option => option.option === 'channelToFetch').value 
@@ -172,13 +176,24 @@ export const vitas = async (msg:Discord.Message, reaction?) => {
         prng: Math.random,
         filter: result => result.string.endsWith('.')
     }
+    const invoker = cache["invokers"] && cache["invokers"].find(invoker => invoker.id === msg.author.id)
+        ? cache["invokers"].find(invoker => invoker.id === msg.author.id)
+        : ({ 
+            id: msg.author.id,
+            name: msg.author.username,
+            summons: 0
+        });
+
+        console.log(invoker)
     const normalizedMsgs:string[] = cache["vitas"].map(vitas => vitas.vitas);
     const chanceToSwapNouns = cache["options"] ? cache["options"].find(option => option.option === 'chanceToSwapNouns').value : 30;
     const chanceToSwapProperNouns = cache["options"] ? cache["options"].find(option => option.option === 'chanceToSwapProperNouns').value : 55;
     const chanceToSwapNicknames = cache["options"] ? cache["options"].find(option => option.option === 'chanceToSwapNicknames').value : 30;
     let content = '';
     const usersTalking:string[] = [];
+    const updatedInvoker = { ...invoker, summons: invoker.summons + 1 };
 
+    upsertOne('vitas', 'invokers', { id: msg.author.id }, updatedInvoker, err => log.WARN(err));
     initMarkov(normalizedMsgs); //this should be done only once!
 
     await msg.channel.fetchMessages({ limit: 10, before: msg.id })
@@ -231,8 +246,57 @@ export const vitas = async (msg:Discord.Message, reaction?) => {
         })
         .catch(err => console.trace(err));
 }
+export const getInvokers = (msg:Discord.Message) => {
+    msg.channel.startTyping();
 
-export const refresh = (msg:Discord.Message) => {
-    config.DATABASES.map(db => updateCache(db.symbol));
-    msg.react('✔️');    
+    let logs;
+    try { 
+        logs = require('../../data.json');
+    }
+    catch(err) { 
+        console.log(err);
+        return msg.channel.send('Data file not found.') 
+    }
+    type TFinal = {
+        name: string,
+        summons: number,
+        id: string
+    }
+    const final:TFinal[] = [];
+    const flattened = logs.map(log => flatten(log.messages));
+    const flattenedMore = flatten(flattened);
+    let filtered = flattenedMore
+        .filter(msg => msg.embeds && msg.embeds[0] && msg.embeds[0].fields && msg.embeds[0].fields[1] && msg.embeds[0].fields[1].value.startsWith("```$vitas"))
+        .map(msg => {
+            let name = msg.embeds[0].fields[0].value;
+            name = name.substring(name.indexOf('**Author:** ') + 12, name.indexOf('#')).trim();
+            return {
+                id: msg.id,
+                name: name
+                }
+            }
+        );
+    filtered = uniqBy(filtered, 'id')
+        .map(msg => {
+            const alreadyExists = final.findIndex(user => user.name === msg.name);
+            if (alreadyExists === -1)
+                final.push({
+                    name: msg.name,
+                    summons: 1,
+                    id: ""
+                })
+            else 
+                final[alreadyExists] = {
+                    name: msg.name,
+                    summons: final[alreadyExists].summons + 1,
+                    id: ""
+                }
+        });
+    insertMany('vitas', 'invokers', final, err =>
+        err
+            ? console.log(err)
+            : null
+    )
+    msg.channel.send('Done!');
+    msg.channel.stopTyping();
 }
