@@ -1,7 +1,8 @@
 import Discord from "discord.js";
 import Markov from 'markov-strings';
 import nlp from 'compromise';
-import { uniq, uniqBy, flatten } from 'lodash';
+import { uniq, uniqBy, orderBy, flatten } from 'lodash';
+import { createEmbed } from '../helpers';
 import { chooseRandom, happensWithAChanceOf } from '../rng';
 import { insertData, insertMany, upsertOne } from '../db';
 import { log } from '../../log';
@@ -93,8 +94,10 @@ export const fetch = (msg:Discord.Message) => {
     // @ts-ignore:next-line
     const channel = cache.bot.channels.find(channel => channel.id === channelId)
     
-    if (!channel)
-        return msg.channel.send('Invalid channel.');
+    if (!channel) {
+        msg.channel.send('Invalid channel.');
+        return;
+    }
     
     const fetchMoar = (index, lastMsgId) => {
         channel.fetchMessages({ limit: 100, before: lastMsgId })
@@ -136,8 +139,9 @@ export const fetchlocal = (msg:Discord.Message) => {
         logs = require('../../data.json');
     }
     catch(err) { 
-        console.log(err);
-        return msg.channel.send('Data file not found.') 
+        log.WARN(err);
+        msg.channel.send('Data file not found.');
+        return;
     }
 
     if (logs.length > 0 && typeof logs[0] === 'string') { // just an array of quotes
@@ -183,8 +187,6 @@ export const vitas = async (msg:Discord.Message, reaction?) => {
             name: msg.author.username,
             summons: 0
         });
-
-        console.log(invoker)
     const normalizedMsgs:string[] = cache["vitas"].map(vitas => vitas.vitas);
     const chanceToSwapNouns = cache["options"] ? cache["options"].find(option => option.option === 'chanceToSwapNouns').value : 30;
     const chanceToSwapProperNouns = cache["options"] ? cache["options"].find(option => option.option === 'chanceToSwapProperNouns').value : 55;
@@ -193,7 +195,7 @@ export const vitas = async (msg:Discord.Message, reaction?) => {
     const usersTalking:string[] = [];
     const updatedInvoker = { ...invoker, summons: invoker.summons + 1 };
 
-    upsertOne('vitas', 'invokers', { id: msg.author.id }, updatedInvoker, err => log.WARN(err));
+    upsertOne('vitas', 'invokers', { id: msg.author.id }, updatedInvoker, err => err && log.WARN(err));
     initMarkov(normalizedMsgs); //this should be done only once!
 
     await msg.channel.fetchMessages({ limit: 10, before: msg.id })
@@ -246,6 +248,24 @@ export const vitas = async (msg:Discord.Message, reaction?) => {
         })
         .catch(err => console.trace(err));
 }
+export const invokers = (msg:Discord.Message) => {
+    let invokers = cache["invokers"];
+    if (!invokers) {
+        msg.channel.send('Something went wrong.');
+        return;
+    }
+    msg.channel.startTyping();
+    const top = 10;
+    invokers = orderBy(invokers, ['summons'], ['desc']).slice(0, top);
+    let content = '';
+    invokers.map((invoker, index) => content = `${content}\`\`${index + 1}.\`\` __${invoker.name}__ - **${invoker.summons}** summons\n`);
+    const embed = createEmbed(`Top ${top} Vitas summoners`, [{ title: '\_\_\_', content }])
+    msg.channel.send(embed);
+    msg.channel.stopTyping();
+}
+
+
+// this is not added to the list of commands
 export const getInvokers = (msg:Discord.Message) => {
     msg.channel.startTyping();
 
@@ -254,8 +274,9 @@ export const getInvokers = (msg:Discord.Message) => {
         logs = require('../../data.json');
     }
     catch(err) { 
-        console.log(err);
-        return msg.channel.send('Data file not found.') 
+        log.WARN(err);
+        msg.channel.send('Data file not found.');
+        return;
     }
     type TFinal = {
         name: string,
