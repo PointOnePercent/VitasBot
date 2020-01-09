@@ -3,7 +3,7 @@ import Markov from 'markov-strings';
 import nlp from 'compromise';
 import { uniq, flatten } from 'lodash';
 import { chooseRandom, happensWithAChanceOf } from '../rng';
-import { insertData } from '../db';
+import { insertData, insertMany } from '../db';
 import { log } from '../../log';
 import { cache } from '../../cache';
 import { updateCache } from '../db';
@@ -95,6 +95,7 @@ export const fetch = (msg:Discord.Message) => {
     const fetchMoar = (index, lastMsgId) => {
         channel.fetchMessages({ limit: 100, before: lastMsgId })
             .then(messages => {
+                log.INFO(`fetching part ${index} of ${fetchLimit}...`)
                 messages.map(msg => {
                     if (msg.content != '' && msg.author.id === userId && !msg.content.startsWith('http'))
                         msgs.push(msg.content.endsWith('.') || msg.content.endsWith('?') || msg.content.endsWith('!') ? msg.content : `${msg.content}.`)
@@ -109,12 +110,13 @@ export const fetch = (msg:Discord.Message) => {
     }
     
     const finish = () => {
-        const normalizedMsgs = uniq(msgs);
-        normalizedMsgs.map(msg => insertData('vitas', userName, userName, msg, err =>
+        const normalizedMsgs = uniq(msgs)
+            .map(msg => ({ [userName]: msg }));
+        insertMany('vitas', userName, normalizedMsgs, err =>
             err
                 ? console.log(err)
                 : null
-        ))
+        )
         msg.channel.send('Done!');
         msg.channel.stopTyping();
     }
