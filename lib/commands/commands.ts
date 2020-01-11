@@ -184,19 +184,8 @@ export const vitas = async (msg:Discord.Message, reaction?) => {
         prng: Math.random,
         filter: result => result.string.endsWith('.')
     }
-    // @ts-ignore:next-line
-    let invoker:{id:string, name:string, summons:number} = await mongo.getDocument('vitas', 'invokers', { id: msg.author.id });
-    if (!invoker)
-        invoker = ({ 
-            id: msg.author.id,
-            name: msg.author.username,
-            summons: 0
-        });
-    let content = '';
     const usersTalking:string[] = [];
-    const updatedInvoker = { ...invoker, summons: invoker.summons + 1 };
-
-    mongo.upsertOne('vitas', 'invokers', { id: msg.author.id }, updatedInvoker, err => err && log.WARN(err));
+    let content = '';
 
     await msg.channel.fetchMessages({ limit: 10, before: msg.id })
         .then(async messages => {
@@ -245,6 +234,17 @@ export const vitas = async (msg:Discord.Message, reaction?) => {
             console.log(`${new Date().toLocaleString()} - [RESULT] - ${JSON.stringify(content)}`);
             msg.channel.stopTyping();
             msg.channel.send(content);
+
+            // @ts-ignore:next-line
+            let invoker:{id:string, name:string, summons:number} = await mongo.getDocument('vitas', 'invokers', { id: msg.author.id });
+            if (!invoker)
+                invoker = ({ 
+                    id: msg.author.id,
+                    name: msg.author.username,
+                    summons: 0
+                });            
+            const updatedInvoker = { ...invoker, summons: invoker.summons + 1 };
+            mongo.upsertOne('vitas', 'invokers', { id: msg.author.id }, updatedInvoker, err => err && log.WARN(err));
         })
         .catch(err => {
             console.trace(err)
