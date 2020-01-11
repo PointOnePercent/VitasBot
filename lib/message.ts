@@ -16,7 +16,6 @@ const isUserAdmin = (msg:Discord.Message) => msg.member.hasPermission('ADMINISTR
 const isUserBot = (msg:Discord.Message) => msg.author.bot;
 const isUserArcy = (msg:Discord.Message) => msg.author.id === '165962236009906176';
 const messageStartsWithCommandSymbol = (msg:Discord.Message) => msg.content.startsWith(getCommandSymbol());
-const isMessageRant = (msg:Discord.Message) => msg.content === msg.content.toUpperCase() && msg.content.length > 20;
 
 const deleteCommand = (msg:Discord.Message) => {
     setTimeout(() => {
@@ -61,8 +60,8 @@ const commandObject = (msg:Discord.Message) => cache["commands"].find(cmd => cmd
 
 // MAIN FUNCTION
 
-const classifyMessage = (msg:Discord.Message) => {
-    if (isUserBot(msg)) {
+const classifyMessage = (msg:Discord.Message, isReady:boolean) => {
+    if (!isReady || isUserBot(msg)) {
         return;
     }
     if (isChannelDM(msg) && !isUserArcy(msg)) {

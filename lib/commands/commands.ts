@@ -1,25 +1,13 @@
 import Discord from "discord.js";
-import Markov from 'markov-strings';
 import nlp from 'compromise';
 import { uniq, uniqBy, orderBy, flatten } from 'lodash';
 import { createEmbed } from '../helpers';
 import { chooseRandom, happensWithAChanceOf } from '../rng';
-import { insertData, insertMany, upsertOne } from '../db';
+import { mongo } from '../mongo';
+import { markov } from '../markov';
 import { log } from '../../log';
 import { cache } from '../../cache';
-import { updateCache } from '../db';
-import config from '../../config.json';
 
-// INITIALIZATION
-let markovInit;
-const initMarkov = async dataArrays => {
-    const stateSize = cache["options"] 
-        ? cache["options"].find(option => option.option === 'stateSize').value 
-        : 2;
-    const data = [].concat(...dataArrays);
-    markovInit = new Markov(data, { stateSize })
-    markovInit.buildCorpus();
-}
 let nlpPlugin = (Doc, world) => {
     const customWords = {};
     const customTags = {};
@@ -72,10 +60,17 @@ let normalize = (content, include?, exclude?) => {
     return nounArray;
 }
 
-export const refresh = (msg:Discord.Message) => {
-    config.DATABASES.map(db => updateCache(db.symbol));
-    msg.react('✔️');    
+export const refresh = async (msg:Discord.Message) => { 
+    msg.channel.startTyping();
+    cache["options"] = await mongo.getCollection('vitas', 'options');
+    cache["commands"] = await mongo.getCollection('vitas', 'commands');
+    cache["reactions"] = await mongo.getCollection('vitas', 'reactions');
+    cache["customTags"] = await mongo.getCollection('vitas', 'customTags');
+    cache["customWords"] = await mongo.getCollection('vitas', 'customWords');
+    msg.channel.send('Done!');
+    msg.channel.stopTyping();
 }
+
 export const fetch = (msg:Discord.Message) => {
     const channelId = cache["options"] 
         ? cache["options"].find(option => option.option === 'channelToFetch').value 
@@ -119,7 +114,7 @@ export const fetch = (msg:Discord.Message) => {
     const finish = () => {
         const normalizedMsgs = uniq(msgs)
             .map(msg => ({ [userName]: msg }));
-        insertMany('vitas', userName, normalizedMsgs, err =>
+        mongo.insertMany('vitas', userName, normalizedMsgs, err =>
             err
                 ? console.log(err)
                 : null
@@ -157,7 +152,7 @@ export const fetchlocal = (msg:Discord.Message) => {
             .map(msg => msg.content.endsWith('.') || msg.content.endsWith('?') || msg.content.endsWith('!') ? msg.content : `${msg.content}.`);
     }
     const normalizedMsgs = uniq(filtered);
-    normalizedMsgs.map(msg => insertData('vitas', 'vitas', 'vitas', msg, err =>
+    normalizedMsgs.map(msg => mongo.insertData('vitas', 'vitas', 'vitas', msg, err =>
         err
             ? console.log(err)
             : null
@@ -180,29 +175,25 @@ export const vitas = async (msg:Discord.Message, reaction?) => {
         prng: Math.random,
         filter: result => result.string.endsWith('.')
     }
-    const invoker = cache["invokers"] && cache["invokers"].find(invoker => invoker.id === msg.author.id)
-        ? cache["invokers"].find(invoker => invoker.id === msg.author.id)
-        : ({ 
+    // @ts-ignore:next-line
+    let invoker:{id:string, name:string, summons:number} = await mongo.getDocument('vitas', 'invokers', { id: msg.author.id });
+    if (!invoker)
+        invoker = ({ 
             id: msg.author.id,
             name: msg.author.username,
             summons: 0
         });
-    const normalizedMsgs:string[] = cache["vitas"].map(vitas => vitas.vitas);
-    const chanceToSwapNouns = cache["options"] ? cache["options"].find(option => option.option === 'chanceToSwapNouns').value : 30;
-    const chanceToSwapProperNouns = cache["options"] ? cache["options"].find(option => option.option === 'chanceToSwapProperNouns').value : 55;
-    const chanceToSwapNicknames = cache["options"] ? cache["options"].find(option => option.option === 'chanceToSwapNicknames').value : 30;
     let content = '';
     const usersTalking:string[] = [];
     const updatedInvoker = { ...invoker, summons: invoker.summons + 1 };
 
-    upsertOne('vitas', 'invokers', { id: msg.author.id }, updatedInvoker, err => err && log.WARN(err));
-    initMarkov(normalizedMsgs); //this should be done only once!
+    mongo.upsertOne('vitas', 'invokers', { id: msg.author.id }, updatedInvoker, err => err && log.WARN(err));
 
     await msg.channel.fetchMessages({ limit: 10, before: msg.id })
         .then(async messages => {
             const limit = reaction ? sentencesReaction : sentencesCommand;
             for (let i = 0; i < limit; i++) 
-                content += await markovInit.generate(options).string + ' ';
+                content += await markov.corpus.generate(options).string + ' ';
             
             messages = messages.filter(message => !message.author.bot);
             messages.map(message => usersTalking.push(message.author.username));
@@ -224,18 +215,18 @@ export const vitas = async (msg:Discord.Message, reaction?) => {
             console.log(`${new Date().toLocaleString()} - [VITAS PROPER NOUNS] - ${JSON.stringify(vitasProperNouns)}`);
 
             vitasNouns.map(nounToSwap => {
-                if (happensWithAChanceOf(chanceToSwapNouns) && recentNouns.length !== 0) {
+                if (happensWithAChanceOf(markov.chanceToSwapNouns) && recentNouns.length !== 0) {
                     const replaceWith = chooseRandom(recentNouns);
                     content = content.replace(nounToSwap, replaceWith);
                 }
             })
             vitasProperNouns.map(properNounToSwap => {
-                if (happensWithAChanceOf(chanceToSwapProperNouns) && recentProperNouns.length !== 0) {
+                if (happensWithAChanceOf(markov.chanceToSwapProperNouns) && recentProperNouns.length !== 0) {
                     const replaceWith = chooseRandom(recentProperNouns);
                     const regex = new RegExp(properNounToSwap, "gi");
                     content = content.replace(regex, replaceWith);
                 }
-                else if (happensWithAChanceOf(chanceToSwapNicknames)) {
+                else if (happensWithAChanceOf(markov.chanceToSwapNicknames)) {
                     const replaceWith = chooseRandom(usersTalking);
                     const regex = new RegExp(properNounToSwap, "gi");
                     content = content.replace(regex, replaceWith);
@@ -248,8 +239,8 @@ export const vitas = async (msg:Discord.Message, reaction?) => {
         })
         .catch(err => console.trace(err));
 }
-export const invokers = (msg:Discord.Message) => {
-    let invokers = cache["invokers"];
+export const invokers = async (msg:Discord.Message) => {
+    let invokers = await mongo.getCollection('vitas', 'invokers');
     if (!invokers) {
         msg.channel.send('Something went wrong.');
         return;
@@ -258,6 +249,7 @@ export const invokers = (msg:Discord.Message) => {
     const top = 10;
     invokers = orderBy(invokers, ['summons'], ['desc']).slice(0, top);
     let content = '';
+    // @ts-ignore:next-line
     invokers.map((invoker, index) => content = `${content}\`\`${index + 1}.\`\` __${invoker.name}__ - **${invoker.summons}** summons\n`);
     const embed = createEmbed(`Top ${top} Vitas summoners`, [{ title: '\_\_\_', content }])
     msg.channel.send(embed);
@@ -313,7 +305,7 @@ export const getInvokers = (msg:Discord.Message) => {
                     id: ""
                 }
         });
-    insertMany('vitas', 'invokers', final, err =>
+    mongo.insertMany('vitas', 'invokers', final, err =>
         err
             ? console.log(err)
             : null

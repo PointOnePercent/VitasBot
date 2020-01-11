@@ -2,12 +2,12 @@ import Discord from 'discord.js';
 
 type IBotCache = {
     bot?: Discord.Client,
-    dbs?: { }
+    options?: []
 }
 
 let botCache:IBotCache = {
     bot: undefined,
-    dbs: { }
+    options: undefined
 };
 
 class BotCache {
