@@ -1,4 +1,5 @@
 import Markov from 'markov-strings';
+import { log } from '../log';
 import { mongo } from './mongo';
 
 let markovCorpus;
@@ -14,6 +15,7 @@ class MarkovCorpus {
     }
 
     init = async () => {
+        log.INFO(`Building Markov chain corpus...`)
         const options:any = await mongo.getCollection('vitas', 'options');
         const vitas:any = await mongo.getCollection('vitas', 'vitas');
         const stateSize = options.find(option => option.option === 'stateSize') 
@@ -23,6 +25,7 @@ class MarkovCorpus {
 
         this.corpus = new Markov(data, { stateSize });
         this.corpus.buildCorpus();
+        log.INFO(`Markov chain corpus built!`);
     }
 }
 

@@ -45,21 +45,23 @@ class MongoDB {
 
     getCollection = (dbSymbol:string, collectionSymbol:string) => 
         new Promise(async (resolve, reject) => {
+            log.WARN(`Fetching collection ${dbSymbol}/${collectionSymbol}...`);
             let cursor;
             try {
                 cursor = await this.dbs[dbSymbol].collection(collectionSymbol).find({});
             }
             catch(err) {
-                log.WARN(`fetching collection ${dbSymbol}/${collectionSymbol} failed`);
+                log.WARN(`Fetching collection ${dbSymbol}/${collectionSymbol} failed!`);
                 log.WARN(err);
             }
             cursor.toArray((err, docs) => {
                 if (err) {
-                    log.WARN(`transforming collection ${dbSymbol}/${collectionSymbol} failed`);
+                    log.WARN(`Transforming collection ${dbSymbol}/${collectionSymbol} failed!`);
                     log.WARN(err);
                     reject();
                 }
                 else {
+                    log.INFO(`Fetching collection ${dbSymbol}/${collectionSymbol} succeeded!`);
                     resolve(docs);
                 }
             });
@@ -73,7 +75,7 @@ class MongoDB {
                 cursor = await this.dbs[dbSymbol].collection(collectionSymbol).find(document);
             }
             catch(err) {
-                log.WARN(`fetching document ${dbSymbol}/${collectionSymbol}/${JSON.stringify(document)} failed`);
+                log.WARN(`Fetching document ${dbSymbol}/${collectionSymbol}/${JSON.stringify(document)} failed`);
                 log.WARN(err);
             }
             cursor.toArray((err, docs) => err
