@@ -168,6 +168,15 @@ export const vitas = async (msg:Discord.Message, reaction?) => {
     const sentencesReaction = cache["options"] 
         ? cache["options"].find(option => option.option === 'sentencesReaction').value 
         : 3;
+    const chanceToSwapNouns = cache["options"] 
+        ? cache["options"] .find(option => option.option === 'chanceToSwapNouns').value 
+        : 30;
+    const chanceToSwapProperNouns = cache["options"] 
+        ? cache["options"].find(option => option.option === 'chanceToSwapProperNouns').value 
+        : 55;
+    const chanceToSwapNicknames = cache["options"]
+        ? cache["options"] .find(option => option.option === 'chanceToSwapNicknames').value 
+        : 30;
     const options = {
         maxTries: 50,
         maxLength: 300,
@@ -215,18 +224,18 @@ export const vitas = async (msg:Discord.Message, reaction?) => {
             console.log(`${new Date().toLocaleString()} - [VITAS PROPER NOUNS] - ${JSON.stringify(vitasProperNouns)}`);
 
             vitasNouns.map(nounToSwap => {
-                if (happensWithAChanceOf(markov.chanceToSwapNouns) && recentNouns.length !== 0) {
+                if (happensWithAChanceOf(chanceToSwapNouns) && recentNouns.length !== 0) {
                     const replaceWith = chooseRandom(recentNouns);
                     content = content.replace(nounToSwap, replaceWith);
                 }
             })
             vitasProperNouns.map(properNounToSwap => {
-                if (happensWithAChanceOf(markov.chanceToSwapProperNouns) && recentProperNouns.length !== 0) {
+                if (happensWithAChanceOf(chanceToSwapProperNouns) && recentProperNouns.length !== 0) {
                     const replaceWith = chooseRandom(recentProperNouns);
                     const regex = new RegExp(properNounToSwap, "gi");
                     content = content.replace(regex, replaceWith);
                 }
-                else if (happensWithAChanceOf(markov.chanceToSwapNicknames)) {
+                else if (happensWithAChanceOf(chanceToSwapNicknames)) {
                     const replaceWith = chooseRandom(usersTalking);
                     const regex = new RegExp(properNounToSwap, "gi");
                     content = content.replace(regex, replaceWith);
@@ -234,10 +243,13 @@ export const vitas = async (msg:Discord.Message, reaction?) => {
             })
             content = content.replace(/<@.*?>/g, chooseRandom(usersTalking));
             console.log(`${new Date().toLocaleString()} - [RESULT] - ${JSON.stringify(content)}`);
-            msg.channel.send(content);
             msg.channel.stopTyping();
+            msg.channel.send(content);
         })
-        .catch(err => console.trace(err));
+        .catch(err => {
+            console.trace(err)
+            msg.channel.stopTyping();
+        });
 }
 export const invokers = async (msg:Discord.Message) => {
     let invokers = await mongo.getCollection('vitas', 'invokers');
