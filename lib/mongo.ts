@@ -45,7 +45,7 @@ class MongoDB {
 
     getCollection = (dbSymbol:string, collectionSymbol:string) => 
         new Promise(async (resolve, reject) => {
-            log.WARN(`Fetching collection ${dbSymbol}/${collectionSymbol}...`);
+            log.INFO(`Fetching collection ${dbSymbol}/${collectionSymbol}...`);
             let cursor;
             try {
                 cursor = await this.dbs[dbSymbol].collection(collectionSymbol).find({});

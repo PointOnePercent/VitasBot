@@ -26,7 +26,8 @@ class Command {
 
     private _canBeExecuted(msg:Discord.Message) {
         if (this.isDisabled) {
-            msg.react('🚧');
+            // msg.react('🚧');
+            msg.react('🚫');
             return false;
         }
         if (this.isModOnly && !isUserAdmin(msg)) {

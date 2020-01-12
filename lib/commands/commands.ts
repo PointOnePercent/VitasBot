@@ -166,8 +166,8 @@ export const vitas = async (msg:Discord.Message, reaction?) => {
         ? cache["options"].find(option => option.option === 'sentencesCommand').value 
         : 5;
     const sentencesReaction = cache["options"] 
-        ? cache["options"].find(option => option.option === 'sentencesReaction').value 
-        : 3;
+        ? chooseRandom(cache["options"].find(option => option.option === 'sentencesReaction').value)
+        : chooseRandom([1, 2, 3, 4]);
     const chanceToSwapNouns = cache["options"] 
         ? cache["options"] .find(option => option.option === 'chanceToSwapNouns').value 
         : 30;
