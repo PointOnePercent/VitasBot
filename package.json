@@ -23,7 +23,7 @@
   "homepage": "https://github.com/PointOnePercent/VitasBot#readme",
   "dependencies": {
     "@types/node": "^11.13.4",
-    "axios": ">=0.18.1",
+    "axios": ">=0.21.1",
     "compromise": "^12.3.0",
     "discord.js": "^11.4.2",
     "markov-strings": "^2.1.0",
